@@ -14,7 +14,6 @@ Scoped CSS allows you to add custom CSS rules with display conditions. Unlike tr
 
 - **Unlimited CSS Rules** – Create as many CSS rules as you need
 - **Conditional Loading** – Load CSS only where it's needed
-- **Multiple Output Locations** – Choose head, footer, or body output
 - **CodeMirror Editor** – Syntax highlighting and error checking
 - **CSS Minify/Format** – One-click minification and formatting
 - **Performance Optimized** – No frontend JavaScript, cached queries
@@ -26,18 +25,18 @@ Scoped CSS allows you to add custom CSS rules with display conditions. Unlike tr
 
 Each CSS rule can be targeted to:
 
-| Condition | Description |
-|-----------|-------------|
-| Entire Site | Apply everywhere |
-| Front Page | Homepage only |
-| Blog Page | Posts listing page |
-| 404 Page | Error page |
-| Specific Page | Target individual pages |
-| Specific Post | Target individual posts |
-| Post Type | All posts of a type |
-| URL Exact Match | Match exact URL path |
-| URL Contains | Match URLs containing a string |
-| URL Starts With | Match URLs by prefix |
+| Condition       | Description                    |
+| --------------- | ------------------------------ |
+| Entire Site     | Apply everywhere               |
+| Front Page      | Homepage only                  |
+| Blog Page       | Posts listing page             |
+| 404 Page        | Error page                     |
+| Specific Page   | Target individual pages        |
+| Specific Post   | Target individual posts        |
+| Post Type       | All posts of a type            |
+| URL Exact Match | Match exact URL path           |
+| URL Contains    | Match URLs containing a string |
+| URL Starts With | Match URLs by prefix           |
 
 Conditions can be combined with **AND/OR** logic for complex targeting.
 
@@ -53,9 +52,8 @@ Conditions can be combined with **AND/OR** logic for complex targeting.
 2. Click **Add New** to create a CSS rule
 3. Enter a title (for admin reference)
 4. Add your CSS code in the editor
-5. Choose where to output the CSS (Head, Footer, or Body)
-6. Set display conditions to control where the CSS loads
-7. Click **Publish** to activate the rule
+5. Set display conditions to control where the CSS loads
+6. Click **Publish** to activate the rule
 
 ### Tips
 
@@ -91,6 +89,7 @@ wp scoped-css cache-clear
 ### Does this plugin slow down my site?
 
 No. Scoped CSS is optimized for performance:
+
 - Single database query to fetch all rules (cached)
 - No JavaScript loaded on the frontend
 - Conditions evaluated with native WordPress functions
@@ -103,13 +102,13 @@ Yes! When you activate Scoped CSS, any existing CSS from Simple Custom CSS will 
 ## Changelog
 
 ### 1.0.0
+
 - Initial release
 - Custom Post Type architecture
 - Conditional CSS loading with 10 condition types
 - CodeMirror editor integration
 - CSS minify and format tools
 - AND/OR condition logic
-- Head/Footer/Body output locations
 - WP-CLI support
 - Automatic migration from Simple Custom CSS
 

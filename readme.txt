@@ -18,7 +18,6 @@ Scoped CSS is a lightweight plugin that allows you to add custom CSS rules with 
 
 * **Unlimited CSS Rules** – Create as many CSS rules as you need
 * **Conditional Loading** – Load CSS only where it's needed
-* **Multiple Output Locations** – Choose head, footer, or body output
 * **CodeMirror Editor** – Syntax highlighting and error checking
 * **CSS Minify/Format** – One-click minification and formatting
 * **Performance Optimized** – No frontend JavaScript, cached queries
@@ -84,10 +83,9 @@ Use the "URL Contains" or "URL Starts With" condition for wildcard-like matching
 
 == Screenshots ==
 
-1. CSS Rules list with status, location, and conditions overview
+1. CSS Rules list with status and conditions overview
 2. CSS editor with CodeMirror syntax highlighting and minify/format buttons
 3. Display conditions builder with multiple condition types
-4. Output location selector
 
 == Changelog ==
 
@@ -98,7 +96,6 @@ Use the "URL Contains" or "URL Starts With" condition for wildcard-like matching
 * CodeMirror editor integration
 * CSS minify and format tools
 * AND/OR condition logic
-* Head/Footer/Body output locations
 * Rate-limited AJAX endpoints
 * CSS validation with dangerous pattern detection
 * Automatic migration from Simple Custom CSS
