@@ -1,0 +1,32 @@
+# IDE/Editor
+.idea/
+.vscode/
+*.sublime-*
+*.code-workspace
+
+# OS generated
+.DS_Store
+.DS_Store?
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+debug.log
+
+# Local development
+.env
+.env.local
+wp-config-local.php
+
+# Build artifacts (if added later)
+node_modules/
+vendor/
+*.map
+
+# Backups
+*.bak
+*~
+
+# Package files (for distribution)
+*.zip
