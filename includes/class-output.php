@@ -150,7 +150,8 @@ class Scoped_CSS_Output
             printf(
                 "\n<style id=\"scoped-css-%d\">\n%s\n</style>\n",
                 intval($item['id']),
-                $css // Already sanitized
+                // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CSS is sanitized via sanitize_css().
+                $css
             );
         }
     }

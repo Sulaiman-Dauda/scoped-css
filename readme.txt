@@ -2,7 +2,7 @@
 Contributors: sulaimandauda
 Tags: css, custom css, conditional css, page-specific css, scoped styles
 Requires at least: 5.3
-Tested up to: 6.7
+Tested up to: 6.9
 Stable tag: 1.0.0
 Requires PHP: 7.2
 License: GPLv2 or later

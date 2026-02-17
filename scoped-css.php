@@ -69,9 +69,6 @@ spl_autoload_register(function ($class) {
  */
 function scoped_css_init()
 {
-    // Load text domain
-    load_plugin_textdomain('scoped-css', false, dirname(SCOPED_CSS_BASENAME) . '/languages');
-
     // Grant capabilities to admin role dynamically
     add_filter('user_has_cap', function ($allcaps, $caps, $args, $user) {
         // If user is admin, grant all scoped_css capabilities

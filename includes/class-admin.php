@@ -286,7 +286,7 @@ class Scoped_CSS_Admin
     public function save_post(int $post_id, WP_Post $post): void
     {
         // Verify nonce
-        if (! isset($_POST['scoped_css_nonce']) || ! wp_verify_nonce($_POST['scoped_css_nonce'], 'scoped_css_save')) {
+        if (! isset($_POST['scoped_css_nonce']) || ! wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['scoped_css_nonce'])), 'scoped_css_save')) {
             return;
         }
 
@@ -300,22 +300,12 @@ class Scoped_CSS_Admin
             return;
         }
 
-        // Log the change
-        $user_id = get_current_user_id();
-
         // Validate CSS
         if (isset($_POST['scoped_css_content'])) {
-            $css_input = wp_unslash($_POST['scoped_css_content']);
+            $css_input = wp_strip_all_tags(wp_unslash($_POST['scoped_css_content']));
             $validation = Scoped_CSS_Validator::validate_css($css_input);
 
             if (! $validation['valid']) {
-                // Log validation error
-                error_log(sprintf(
-                    '[Scoped CSS] Validation failed for rule %d user %d: %s',
-                    $post_id,
-                    $user_id,
-                    $validation['message']
-                ));
                 return;
             }
 
@@ -328,15 +318,6 @@ class Scoped_CSS_Admin
                 'post_content' => $css_content,
             ));
             add_action('save_post_scoped_css', array($this, 'save_post'), 10, 2);
-
-            // Log CSS save
-            error_log(sprintf(
-                '[Scoped CSS] CSS updated for rule %d (ID %d) by user %d - %d bytes',
-                $post_id,
-                $post_id,
-                $user_id,
-                strlen($css_content)
-            ));
         }
 
         // Save conditions
@@ -348,7 +329,9 @@ class Scoped_CSS_Admin
 
             $rules = array();
             if (isset($_POST['scoped_css_rules']) && is_array($_POST['scoped_css_rules'])) {
-                foreach ($_POST['scoped_css_rules'] as $rule) {
+                // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized in loop below.
+                $posted_rules = wp_unslash($_POST['scoped_css_rules']);
+                foreach ($posted_rules as $rule) {
                     if (! isset($rule['type'])) {
                         continue;
                     }
@@ -360,11 +343,6 @@ class Scoped_CSS_Admin
 
                     // Validate rule
                     if (! Scoped_CSS_Validator::validate_condition($clean_rule)) {
-                        error_log(sprintf(
-                            '[Scoped CSS] Invalid condition for rule %d: %s',
-                            $post_id,
-                            wp_json_encode($clean_rule)
-                        ));
                         continue;
                     }
 
@@ -383,14 +361,6 @@ class Scoped_CSS_Admin
             );
 
             update_post_meta($post_id, '_scoped_css_conditions', $conditions);
-
-            // Log conditions update
-            error_log(sprintf(
-                '[Scoped CSS] Conditions updated for rule rule %d (%d conditions, match type: %s)',
-                $post_id,
-                count($rules),
-                $match_type
-            ));
         }
 
         // Clear cache
@@ -585,16 +555,16 @@ class Scoped_CSS_Admin
         $post_id = isset($_GET['post_id']) ? intval($_GET['post_id']) : 0;
 
         if (! $post_id || ! check_admin_referer('scoped_css_toggle_' . $post_id)) {
-            wp_die(__('Invalid request', 'scoped-css'));
+            wp_die(esc_html__('Invalid request', 'scoped-css'));
         }
 
         if (! current_user_can('manage_options')) {
-            wp_die(__('Permission denied', 'scoped-css'));
+            wp_die(esc_html__('Permission denied', 'scoped-css'));
         }
 
         $post = get_post($post_id);
         if (! $post || $post->post_type !== 'scoped_css') {
-            wp_die(__('Invalid post', 'scoped-css'));
+            wp_die(esc_html__('Invalid post', 'scoped-css'));
         }
 
         $new_status = $post->post_status === 'publish' ? 'draft' : 'publish';
