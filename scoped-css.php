@@ -6,7 +6,7 @@
  * Description: Load custom CSS based on page, post, or URL conditions. A lightweight conditional CSS manager.
  * Version: 1.0.0
  * Author: Sulaiman Dauda
- * Author URI: https://github.com/Sulaiman-Dauda/Scoped-CSS
+ * Author URI: https://github.com/Sulaiman-Dauda
  * License: GPL-2.0+
  * License URI: http://www.gnu.org/licenses/gpl-2.0.txt
  * Text Domain: scoped-css
