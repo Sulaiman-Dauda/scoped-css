@@ -1,0 +1,148 @@
+# Generated from a shared template. Do not edit it here: changes are made in
+# the template and its pinned versions, then rendered into each repo.
+#
+# Standard tools only, on what the change touched: gitleaks on its commits and
+# zizmor on changed workflows, then for each stack the repo has, a scan of
+# changed lockfiles for vulnerabilities with a fix and a linter that fails only
+# on lines the change added. Build, test and lint stay in the project's own CI.
+name: Change checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions: {}
+
+# A new push to a pull request replaces its running check.
+concurrency:
+  group: change-checks-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  checks:
+    name: Change checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.27.2"
+          cache: false
+
+      - name: Find what changed
+        id: changed
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ "$EVENT" = pull_request ]; then
+            base=$(git merge-base "origin/$BASE_REF" HEAD)
+          elif git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            base=$BEFORE
+          else
+            base=$(git rev-parse HEAD~1)
+          fi
+          git diff --name-only --no-renames --diff-filter=d "$base" HEAD > "$RUNNER_TEMP/changed"
+          echo "Changed since $base:"
+          cat "$RUNNER_TEMP/changed"
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          # The web checks skip dependency, build and fixture folders.
+          grep -Ev '(^|/)(node_modules|vendor|testdata|dist|build|[.]next)/' "$RUNNER_TEMP/changed" > "$RUNNER_TEMP/changed-web" || true
+          # Lines the change added, as "path<TAB>line", and the files it added.
+          git -c core.quotePath=false diff -U0 --no-renames --diff-filter=d "$base" HEAD |
+            awk '/^[+][+][+] b\// { f = substr($0, 7); next }
+              /^@@ / { split($3, a, ","); s = substr(a[1], 2); n = (a[2] == "") ? 1 : a[2]; for (i = 0; i < n; i++) print f "\t" (s + i) }' > "$RUNNER_TEMP/added"
+          git -c core.quotePath=false diff --name-only --no-renames --diff-filter=A "$base" HEAD > "$RUNNER_TEMP/new-files"
+          grep -E '[.]php$' "$RUNNER_TEMP/changed-web" > "$RUNNER_TEMP/php-files" || true
+          if [ -s "$RUNNER_TEMP/php-files" ]; then echo "php=yes" >> "$GITHUB_OUTPUT"; else echo "php=" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Secrets (gitleaks)
+        if: ${{ !cancelled() && steps.changed.outcome == 'success' }}
+        env:
+          BASE: ${{ steps.changed.outputs.base }}
+          GOTOOLCHAIN: local
+          GOBIN: ${{ runner.temp }}/bin
+        run: |
+          go install github.com/zricethezav/gitleaks/v8@v8.30.1
+          args=()
+          if [ -f .gitleaks.toml ]; then args+=(--config .gitleaks.toml); fi
+          if [ -f .gitleaksignore ]; then args+=(--gitleaks-ignore-path .gitleaksignore); fi
+          "$GOBIN/gitleaks" git --log-opts="$BASE..HEAD" --no-banner --redact --verbose --no-color "${args[@]}" .
+
+      - name: Workflows (zizmor)
+        if: ${{ !cancelled() && steps.changed.outcome == 'success' }}
+        run: |
+          mapfile -t files < <(grep -E '^[.]github/workflows/[^/]+[.]ya?ml$' "$RUNNER_TEMP/changed" || true)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No workflow changed."
+            exit 0
+          fi
+          curl -fsSL -o "$RUNNER_TEMP/zizmor.tar.gz" "https://github.com/zizmorcore/zizmor/releases/download/v1.30.1/zizmor-x86_64-unknown-linux-gnu.tar.gz"
+          echo "e65324f4430c2717591937edcec90ccbefaf14c174f8ec9415e03ca875b46e1a  $RUNNER_TEMP/zizmor.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/zizmor.tar.gz" -C "$RUNNER_TEMP" zizmor
+          "$RUNNER_TEMP/zizmor" --offline --no-progress "${files[@]}"
+
+      - name: New issues in PHP (phpcs)
+        if: ${{ !cancelled() && steps.changed.outputs.php != '' }}
+        run: |
+          tools="$RUNNER_TEMP/php-tools"
+          mkdir -p "$tools"
+          cat > "$tools/composer.json" <<'EOF'
+          {
+            "config": {
+              "allow-plugins": {
+                "dealerdirect/phpcodesniffer-composer-installer": true
+              }
+            },
+            "require": {
+              "dealerdirect/phpcodesniffer-composer-installer": "v1.2.1",
+              "phpcsstandards/phpcsextra": "1.5.1",
+              "phpcsstandards/phpcsutils": "1.2.3",
+              "squizlabs/php_codesniffer": "3.13.6",
+              "wp-coding-standards/wpcs": "3.4.1"
+            }
+          }
+          EOF
+          composer update --working-dir="$tools" --no-interaction --no-progress --quiet
+          mapfile -t files < "$RUNNER_TEMP/php-files"
+          # The WordPress security sniffs, errors only, as the local gate runs them.
+          code=0
+          "$tools/vendor/bin/phpcs" -q -s -n --no-colors --report=emacs --standard=WordPress \
+            --sniffs=WordPress.Security.EscapeOutput,WordPress.Security.NonceVerification,WordPress.Security.ValidatedSanitizedInput,WordPress.DB.PreparedSQL,WordPress.DB.PreparedSQLPlaceholders \
+            "${files[@]}" > "$RUNNER_TEMP/phpcs.txt" || code=$?
+          if [ "$code" -eq 0 ]; then
+            echo "No findings."
+            exit 0
+          fi
+          parsed=0
+          hits=0
+          re='^(.+):([0-9]+):[0-9]+: (error|warning) - (.*)$'
+          while IFS= read -r l; do
+            [[ $l =~ $re ]] || continue
+            parsed=$((parsed + 1))
+            p=${BASH_REMATCH[1]#"$PWD/"}
+            n=${BASH_REMATCH[2]}
+            if grep -qxF "$p"$'\t'"$n" "$RUNNER_TEMP/added"; then
+              msg=${BASH_REMATCH[4]//'%'/'%25'}
+              f=${p//'%'/'%25'}
+              f=${f//':'/'%3A'}
+              echo "::error file=${f//','/'%2C'},line=$n::$msg"
+              hits=$((hits + 1))
+            fi
+          done < "$RUNNER_TEMP/phpcs.txt"
+          if [ "$code" -gt 2 ] || [ "$parsed" -eq 0 ]; then
+            echo "::error::phpcs could not run (exit $code)"
+            cat "$RUNNER_TEMP/phpcs.txt"
+            exit 1
+          fi
+          echo "$hits new finding(s) of $parsed"
+          [ "$hits" -eq 0 ]
